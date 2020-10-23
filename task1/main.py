@@ -22,6 +22,7 @@ def refresh():
         class1.extend(generate_mode(np.random.random(), np.random.random(), c1_spread, c1_ppm))
 
     vis.canvas.delete("all")
+    vis.draw_graticule(0.1, 0.1)
     vis.draw_points(class0, "blue")
     vis.draw_points(class1, "red")
 
