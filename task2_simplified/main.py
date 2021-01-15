@@ -1,6 +1,6 @@
 #!/usr/bin/python3
-from task2.visual import Visual
-from task2.neuron import Neuron
+from task2_simplified.visual import Visual
+from task2_simplified.neuron import Neuron
 import numpy as np
 
 
@@ -15,16 +15,51 @@ def relu(x):
         return x
 
 
-neuron = Neuron([0.0, 0.0, 0.0], np.sin, None)
+def l_relu(x):
+    if x < 0:
+        return 0.01*x
+    else:
+        return x
 
 
-def to_lambda(iterable):
-    return tuple((lambda: x for x in iterable))
+def l_relu_der(x):
+    if x < 0:
+        return 0.01
+    else:
+        return 1
+
+
+def sign(x):
+    if x < 0:
+        return 0
+    elif x == 0:
+        return 0.5
+    else:
+        return 1
+
+
+def step(x):
+    if x < 0:
+        return 0
+    else:
+        return 1
+
+
+def sigmoid(x):
+    return 1/(1 + np.exp(-x))
+
+
+def sig_der(x):
+    e2negx = np.exp(-x)
+    return e2negx/(1+e2negx)**2
+
+
+neuron = Neuron([0.0, 0.0, 0.0], np.sin, np.cos)
 
 
 def learn():
-    for _ in range(50):
-        for _ in range(50):
+    for _ in range(10):
+        for _ in range(200):
             train_neuron()
         vis_neuron()
         vis.canvas.update_idletasks()
@@ -32,12 +67,11 @@ def learn():
 
 def train_neuron():
     weight_update = np.array([0.0, 0.0, 0.0])
-    neuron.set_inputs((lambda: 1, lambda: sample[0], lambda: sample[1]))
     for sample in class0:
-        weight_update += neuron.calc_weight_update(0.07, 0)
+        weight_update += neuron.calc_weight_update(0.07, np.array((1, *sample)), 0)
 
     for sample in class1:
-        weight_update += neuron.calc_weight_update(0.07, 1)
+        weight_update += neuron.calc_weight_update(0.07, np.array((1, *sample)), 1)
 
     weight_update /= (len(class0) + len(class1))
     neuron.update_weights(weight_update)
@@ -46,11 +80,10 @@ def train_neuron():
 def vis_neuron():
     vis.canvas.delete("all")
     x = 0
-    neuron.set_inputs((lambda: 1, lambda: x, lambda: y))
     while x <= 1:
         y = 0
         while y <= 1:
-            if neuron.calculate() < 0.5:
+            if neuron.calculate(np.array((1, x, y))) < 0.5:
                 vis.draw_point(x, y, "blue", size=2)
             else:
                 vis.draw_point(x, y, "red", size=2)
