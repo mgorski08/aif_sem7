@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-from typing import List, Set
+import math
+import time
+from queue import PriorityQueue
+from typing import List, Set, Iterable
 from dataclasses import dataclass
 import pygame
 from enum import Enum, unique
 import sys
 import random
-
 
 FPS = 15
 
@@ -60,7 +62,7 @@ class Position:
             return False
 
     def __str__(self):
-        return f"X{self.x};Y{self.y};"
+        return f"X{int(self.x)};Y{int(self.y)};"
 
     def __hash__(self):
         return hash(str(self))
@@ -135,7 +137,7 @@ class Snake:
         self.hasReset = False
         cur = self.get_head_position()
         x, y = self.direction.value
-        new = Position(cur.x + x, cur.y + y,)
+        new = Position(cur.x + x, cur.y + y, )
         if self.collide(new):
             self.reset()
         else:
@@ -283,20 +285,112 @@ class HumanPlayer(Player):
 # DO NOT MODIFY CODE ABOVE THIS LINE
 # ----------------------------------
 
+class QueueElement:
+    def __init__(self, priority, element):
+        self.priority = priority
+        self.element = element
+
+    def get(self):
+        return self.element
+
+    def __lt__(self, other):
+        return self.priority < other.priority
+
+    def __eq__(self, other):
+        return self.priority == other.priority
+
 
 class SearchBasedPlayer(Player):
     def __init__(self):
         super(SearchBasedPlayer, self).__init__()
+        self.queue = PriorityQueue()
+        self.costs = {}
+        self.previous = {}
+        self.done = set()
+
+    def heuristic(self, pos1: Position, pos2: Position):
+        return math.fabs(pos1.x-pos2.x)+math.fabs(pos1.y-pos2.y)
+
+    def cost(self, pos1: Position, pos2: Position, obstacles):
+        if pos1 == pos2:
+            return 0
+        if (pos1, pos2) in self.costs:
+            return self.costs[(pos1, pos2)]
+        if pos2 in self.neighbours(pos1, set()):
+            if pos2 in obstacles:
+                retval = 2
+            else:
+                retval = 1
+            self.costs[(pos1, pos2)] = retval
+            return retval
+        return float("inf")
+
+    def neighbours(self, position: Position, blocked: Iterable[Position]) -> Set[Position]:
+        retval = set()
+        for (x, y) in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+            suspect_neighbour = Position(position.x + x, position.y + y)
+            if suspect_neighbour.check_bounds(GRID_WIDTH, GRID_HEIGHT):
+                continue
+            if suspect_neighbour in blocked:
+                continue
+            retval.add(suspect_neighbour)
+        return retval
 
     def search_path(self, snake: Snake, food: Food, *obstacles: Set[Obstacle]):
-        # self.generate_states...
-        # ...
-        pass
+        self.queue = PriorityQueue()
+        self.costs = {}
+        self.previous = {}
+        self.done = set()
+        start = snake.get_head_position()
+        end = food.position
+        self.queue.put(QueueElement(0, start))
+
+        died = True
+        while self.queue.qsize() != 0:
+            died = True
+            current = self.queue.get().get()
+            if current == end:
+                died = False
+                break
+            if current in self.done:
+                continue
+            for neighbour in self.neighbours(current, snake.positions):
+                if neighbour in self.done:
+                    continue
+                obs = [obstacle.position for obstacle in obstacles[0]]
+                new_cost = self.cost(start, current, obs) + self.cost(current, neighbour, obs)
+                old_cost = self.cost(start, neighbour, obs)
+                if new_cost <= old_cost:
+                    self.previous[neighbour] = current
+                best_cost = min(new_cost, old_cost)
+                self.costs[(start, neighbour)] = best_cost
+                self.queue.put(QueueElement(best_cost+self.heuristic(neighbour, end), neighbour))
+            self.done.add(current)
+
+        if died:
+            print("No path found")
+            time.sleep(1)
+            return
+
+        cur = end
+        while cur != start:
+            prev = self.previous[cur]
+            if cur.x > prev.x:
+                self.chosen_path.append(Direction.RIGHT)
+            elif cur.x < prev.x:
+                self.chosen_path.append(Direction.LEFT)
+            elif cur.y > prev.y:
+                self.chosen_path.append(Direction.DOWN)
+            elif cur.y < prev.y:
+                self.chosen_path.append(Direction.UP)
+            cur = prev
+
+        self.chosen_path.reverse()
 
 
 if __name__ == "__main__":
     snake = Snake(WIDTH, WIDTH, INIT_LENGTH)
-    player = HumanPlayer()
-    # player = SearchBasedPlayer()
+    # player = HumanPlayer()
+    player = SearchBasedPlayer()
     game = SnakeGame(snake, player)
     game.run()
