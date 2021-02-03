@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+import random
+
 from task3.visual import Visual
 from task3.neuron import Network
 import numpy as np
@@ -7,11 +9,16 @@ class0 = []
 class1 = []
 
 network = Network()
+eta = 0.05
+
+
+def tuple2hexcolor(x):
+    return f'#{int(x[0] * 255):02x}{int(x[1] * 255):02x}{int(x[2] * 255):02x}'
 
 
 def learn():
     for _, i in enumerate(range(200)):
-        print(f"{int(i/2)}%")
+        print(f"{int(i / 2)}%")
         for _ in range(10):
             train_network()
         vis_neuron()
@@ -19,15 +26,12 @@ def learn():
 
 
 def train_network():
-    for sample in class0:
-        grad = np.array([1, 0])-network.calculate(np.array(sample))
+    data = [(el, [0, 0, 1]) for el in class0] + [(el, [1, 0, 0]) for el in class1]
+    random.shuffle(data)
+    for sample, y in data:
+        grad = np.array(y) - network.calculate(np.array(sample))
         network.backpropagate(grad)
-        network.adjust(0.1)
-
-    for sample in class1:
-        grad = np.array([0, 1])-network.calculate(np.array(sample))
-        network.backpropagate(grad)
-        network.adjust(0.1)
+        network.adjust(eta)
 
 
 def vis_neuron():
@@ -37,7 +41,7 @@ def vis_neuron():
         y = 0
         while y <= 1:
             prediction = network.calculate(np.array([x, y]))
-            vis.draw_point(x, y, f'#{int(prediction[1]*255):02x}{0:02x}{int(prediction[0]*255):02x}', size=2)
+            vis.draw_point(x, y, tuple2hexcolor(prediction), size=2)
             y += 0.02
         x += 0.02
 

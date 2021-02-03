@@ -20,6 +20,7 @@ class Layer:
 class Linear(Layer):
     def __init__(self, ninputs, width):
         self.w = np.random.rand(ninputs+1, width)
+        self.w = self.w*2-1
 
     def forward(self, x):
         self.x = x
@@ -51,8 +52,9 @@ class Activation(Layer):
 class Network:
     def __init__(self):
         self.layers = [Linear(2, 5), Activation(sigmoid),
-                       Linear(5, 5), Activation(sigmoid),
-                       Linear(5, 2), Activation(sigmoid)]
+                       Linear(5, 15), Activation(sigmoid),
+                       Linear(15, 5), Activation(sigmoid),
+                       Linear(5, 3), Activation(sigmoid)]
 
     def calculate(self, x):
         for layer in self.layers:
